@@ -5,6 +5,7 @@ namespace Mindz\LaravelRelationships\Traits;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 trait RelationHandle
 {
@@ -19,6 +20,8 @@ trait RelationHandle
     private function handleHasOne(Model $model, $relation)
     {
         $data = $model->relationships[$relation] ?? null;
+
+        $relation = Str::camel($relation);
 
         if (!$model->$relation && is_null($data)) {
             return;
@@ -45,6 +48,8 @@ trait RelationHandle
             return;
         }
 
+        $relation = Str::camel($relation);
+
         if ($this->actionIs($data, 'attach')) {
             $this->attach($data, $model, $relation);
             return;
@@ -52,6 +57,11 @@ trait RelationHandle
 
         if ($this->actionIs($data, 'detach')) {
             $this->detach($data, $model, $relation);
+            return;
+        }
+
+        if ($this->actionIs($data, 'update')) {
+            $this->syncWithoutDetaching($data, $model, $relation);
             return;
         }
 
@@ -107,6 +117,13 @@ trait RelationHandle
         $model->$relation()->sync($this->moveIdAsKey($objectsCollection));
     }
 
+    public function syncWithoutDetaching($data, $model, $relation)
+    {
+        $objectsCollection = collect($data['update']);
+
+        $model->$relation()->syncWithoutDetaching($this->moveIdAsKey($objectsCollection));
+    }
+
     private function handleHasMany(Model $model, $relation): void
     {
         $data = $model->relationships[$relation] ?? null;
@@ -114,6 +131,8 @@ trait RelationHandle
         if (is_null($data)) {
             return;
         }
+
+        $relation = Str::camel($relation);
 
         if (isset($data['delete']) && is_array($data['delete'])) {
             $model->$relation()
